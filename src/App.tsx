@@ -17,7 +17,7 @@ function App() {
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar current={page} onNavigate={setPage} condominioNome={condominioNome} />
       <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8">
+        <div className="mx-auto max-w-6xl px-3 py-4 pb-24 md:px-8 md:py-8 md:pb-8">
           {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
           {page === 'moradores' && <Moradores />}
           {page === 'porteiros' && <Porteiros />}
