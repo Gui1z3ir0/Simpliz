@@ -14,15 +14,15 @@ function App() {
   const condominioNome = condominio?.nome ?? 'Simpliz Portaria';
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 sm:py-6">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 sm:py-6 select-none sm:select-auto">
       {/* Smartphone Container */}
-      <div className="w-full sm:max-w-[440px] min-h-screen sm:min-h-[860px] sm:max-h-[92vh] bg-slate-50 sm:rounded-[36px] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] sm:border-[8px] sm:border-slate-800 flex flex-col relative overflow-hidden ring-1 ring-slate-700/50">
+      <div className="w-full sm:max-w-[440px] h-[100dvh] sm:h-[860px] sm:max-h-[92vh] bg-slate-50 sm:rounded-[36px] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] sm:border-[8px] sm:border-slate-800 flex flex-col relative overflow-hidden ring-1 ring-slate-700/50">
         
         {/* Mobile Header & Bottom Navigation */}
         <Sidebar current={page} onNavigate={setPage} condominioNome={condominioNome} />
 
         {/* Scrollable Main Mobile Content */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-4">
+        <main className="flex-1 overflow-y-auto px-3.5 py-4 pb-24 space-y-4 overscroll-contain">
           {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
           {page === 'moradores' && <Moradores />}
           {page === 'porteiros' && <Porteiros />}
