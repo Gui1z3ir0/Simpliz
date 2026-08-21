@@ -150,7 +150,7 @@ export function CentralAtendimento() {
       </div>
 
       {/* Chat Container */}
-      <div className="flex h-[calc(100vh-230px)] min-h-[460px] flex-col rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 overflow-hidden">
+      <div className="flex h-[440px] sm:h-[490px] flex-col rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 overflow-hidden">
         {/* Messages List */}
         <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5">
           {mensagens.map((msg, i) => (

@@ -40,7 +40,7 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
   return (
     <>
       {/* Mobile Top App Header */}
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 md:hidden sticky top-0 z-30 shadow-md">
+      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 sticky top-0 z-30 shadow-md w-full shrink-0">
         <div className="flex items-center gap-2.5 text-white min-w-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-teal-500 to-emerald-400 text-slate-950 font-black text-sm shadow-sm">
             S
@@ -59,8 +59,8 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
         </button>
       </header>
 
-      {/* Mobile Bottom Navigation Bar (App Mobile Style) */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 flex md:hidden items-center justify-around bg-slate-900/95 backdrop-blur-md border-t border-slate-800/80 px-2 py-2 shadow-2xl safe-area-bottom max-w-lg mx-auto sm:rounded-t-2xl sm:border-x">
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="absolute bottom-0 inset-x-0 z-30 flex items-center justify-around bg-slate-900/95 backdrop-blur-md border-t border-slate-800/80 px-1 py-1.5 shadow-2xl safe-area-bottom">
         {NAV_ITEMS.map(({ key, shortLabel, icon: Icon, badge }) => {
           const active = current === key;
           return (
@@ -93,7 +93,7 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
 
       {/* Mobile Drawer / Centered Mobile Menu */}
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-fadeIn" onClick={() => setOpen(false)} />
           <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 backdrop-blur-xl border border-slate-800 p-5 shadow-2xl animate-scaleIn flex flex-col justify-between max-h-[85vh] overflow-y-auto">
             <div>
@@ -131,32 +131,6 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
           </div>
         </div>
       )}
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:shrink-0 bg-slate-900 p-5 justify-between min-h-screen sticky top-0 h-screen">
-        <div>
-          <div className="mb-8 flex items-center gap-3 px-2 pt-1 text-white">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-slate-950 font-black text-lg shadow-md">
-              S
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold leading-tight tracking-wide text-lg text-white">Simpliz</p>
-              <p className="text-xs text-slate-400 mt-0.5 truncate">{condominioNome}</p>
-            </div>
-          </div>
-          <NavList current={current} onNavigate={handleNavigate} />
-        </div>
-
-        <div className="border-t border-slate-800/80 pt-4 px-2">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>Simpliz v1.0</span>
-            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Online
-            </span>
-          </div>
-        </div>
-      </aside>
     </>
   );
 }

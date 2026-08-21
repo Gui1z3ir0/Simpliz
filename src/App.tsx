@@ -11,23 +11,29 @@ import { useCondominio } from '@/hooks/useCondominio';
 function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const { condominio } = useCondominio();
-  const condominioNome = condominio?.nome ?? 'Portaria';
+  const condominioNome = condominio?.nome ?? 'Simpliz Portaria';
 
   return (
-    <div className="flex min-h-screen bg-slate-50 justify-center">
-      <Sidebar current={page} onNavigate={setPage} condominioNome={condominioNome} />
-      <main className="flex-1 overflow-x-hidden flex flex-col items-center justify-start w-full">
-        <div className="w-full max-w-5xl mx-auto px-3.5 py-4 pb-24 md:px-8 md:py-8 md:pb-8">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 sm:py-6">
+      {/* Smartphone Container */}
+      <div className="w-full sm:max-w-[440px] min-h-screen sm:min-h-[860px] sm:max-h-[92vh] bg-slate-50 sm:rounded-[36px] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] sm:border-[8px] sm:border-slate-800 flex flex-col relative overflow-hidden ring-1 ring-slate-700/50">
+        
+        {/* Mobile Header & Bottom Navigation */}
+        <Sidebar current={page} onNavigate={setPage} condominioNome={condominioNome} />
+
+        {/* Scrollable Main Mobile Content */}
+        <main className="flex-1 overflow-y-auto px-4 py-4 pb-24 space-y-4">
           {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
           {page === 'moradores' && <Moradores />}
           {page === 'porteiros' && <Porteiros />}
           {page === 'acessos' && <ControleAcesso />}
           {page === 'atendimento' && <CentralAtendimento />}
           {page === 'configuracoes' && <Configuracoes />}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
 
 export default App;
+
