@@ -142,7 +142,7 @@ export function ControleAcesso() {
         </div>
         <button
           onClick={() => setSolicitarOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
         >
           <Plus size={16} />
           Nova Solicitação
@@ -151,11 +151,11 @@ export function ControleAcesso() {
 
       {/* Porteiro de Serviço Selection Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
             <UserRound size={18} />
           </div>
-          <div>
+          <div className="flex-1 sm:flex-initial min-w-0">
             <label className="text-xs font-medium text-slate-500 block">Porteiro de Serviço Responsável:</label>
             <select
               value={porteiroServico}
@@ -163,7 +163,7 @@ export function ControleAcesso() {
                 setPorteiroServico(e.target.value);
                 setActionError(null);
               }}
-              className="mt-0.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+              className="mt-0.5 w-full sm:w-auto rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
             >
               <option value="">Selecione o porteiro de plantão...</option>
               {porteiros.map((p) => (
@@ -176,7 +176,7 @@ export function ControleAcesso() {
         </div>
 
         {!loadingPorteiros && porteiros.length === 0 && (
-          <span className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+          <span className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg w-full sm:w-auto">
             Atenção: Cadastre um porteiro na aba "Porteiros" para autorizar liberações.
           </span>
         )}

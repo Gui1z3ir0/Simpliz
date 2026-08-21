@@ -91,7 +91,7 @@ export function Porteiros() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
         >
           <Plus size={16} />
           Novo Porteiro
@@ -99,7 +99,7 @@ export function Porteiros() {
       </div>
 
       {/* Grid List */}
-      <div className="rounded-2xl bg-white ring-1 ring-slate-100 shadow-sm overflow-hidden p-6">
+      <div className="rounded-2xl bg-white ring-1 ring-slate-100 shadow-sm overflow-hidden p-4 sm:p-6">
         {loading && <p className="py-8 text-center text-sm text-slate-400">Carregando porteiros...</p>}
         {error && <p className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-xl">{error}</p>}
         {!loading && porteiros.length === 0 && (
@@ -129,22 +129,22 @@ export function Porteiros() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex gap-1 opacity-100 sm:opacity-0 transition-opacity sm:group-hover:opacity-100">
                     <button
                       onClick={() => openEdit(porteiro)}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                      className="rounded-lg p-2 sm:p-1.5 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
                       title="Editar porteiro"
                       aria-label="Editar"
                     >
-                      <Pencil size={15} />
+                      <Pencil size={16} />
                     </button>
                     <button
                       onClick={() => setDeleting(porteiro)}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      className="rounded-lg p-2 sm:p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                       title="Remover porteiro"
                       aria-label="Remover"
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>

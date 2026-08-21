@@ -133,7 +133,7 @@ export function Configuracoes() {
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-3 border-t border-slate-100">
             {saved && (
               <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 animate-fadeIn">
                 <Check size={16} /> Configurações salvas com sucesso!
@@ -142,7 +142,7 @@ export function Configuracoes() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 shadow-sm transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60 shadow-sm transition-all active:scale-95"
             >
               <Save size={16} />
               {saving ? 'Salvando...' : 'Salvar Alterações'}
@@ -152,7 +152,7 @@ export function Configuracoes() {
       </div>
 
       {/* College Presentation Demo Generator */}
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 p-6 text-white shadow-md">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 p-5 sm:p-6 text-white shadow-md">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/20 px-3 py-1 text-xs font-semibold text-teal-300 ring-1 ring-teal-500/30">
@@ -169,7 +169,7 @@ export function Configuracoes() {
             type="button"
             disabled={seeding}
             onClick={handleCarregarDemo}
-            className="flex items-center gap-2 rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-60 shadow-lg shadow-teal-500/20 transition-all active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-60 shadow-lg shadow-teal-500/20 transition-all active:scale-95"
           >
             <Database size={16} />
             {seeding ? 'Carregando dados...' : 'Carregar Dados de Exemplo'}

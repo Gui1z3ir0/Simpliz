@@ -93,12 +93,17 @@ export function Moradores() {
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Moradores</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold text-slate-900">Moradores</h1>
+            <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-200">
+              {moradores.length} {moradores.length === 1 ? 'cadastrado' : 'cadastrados'}
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">Cadastro e gerenciamento de unidades e moradores.</p>
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
         >
           <Plus size={16} />
           Novo Morador
@@ -142,59 +147,75 @@ export function Moradores() {
         )}
         {!loading && moradoresFiltrados.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[540px]">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 bg-slate-50/50">
                   <th className="px-5 py-3.5 font-medium">Nome</th>
                   <th className="px-5 py-3.5 font-medium">Bloco</th>
                   <th className="px-5 py-3.5 font-medium">Apartamento</th>
-                  <th className="px-5 py-3.5 font-medium">Telefone</th>
+                  <th className="px-5 py-3.5 font-medium">Contato</th>
                   <th className="px-5 py-3.5 font-medium text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {moradoresFiltrados.map((morador) => (
-                  <tr key={morador.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-slate-900">{morador.nome}</td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      <span className="inline-flex items-center gap-1">
-                        <Building size={13} className="text-slate-400" />
-                        {morador.bloco || '-'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">{morador.apartamento || '-'}</td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {morador.telefone ? (
-                        <span className="inline-flex items-center gap-1.5 text-slate-700">
-                          <Phone size={13} className="text-slate-400" />
-                          {morador.telefone}
+                {moradoresFiltrados.map((morador) => {
+                  const cleanPhone = (morador.telefone || '').replace(/\D/g, '');
+                  return (
+                    <tr key={morador.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-slate-900">{morador.nome}</td>
+                      <td className="px-5 py-3.5 text-slate-600">
+                        <span className="inline-flex items-center gap-1">
+                          <Building size={13} className="text-slate-400" />
+                          {morador.bloco || '-'}
                         </span>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => openEdit(morador)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
-                          title="Editar"
-                          aria-label="Editar morador"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(morador)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          title="Remover"
-                          aria-label="Remover morador"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-600 font-medium">{morador.apartamento || '-'}</td>
+                      <td className="px-5 py-3.5 text-slate-600">
+                        {morador.telefone ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 text-slate-700">
+                              <Phone size={13} className="text-slate-400" />
+                              {morador.telefone}
+                            </span>
+                            {cleanPhone.length >= 10 && (
+                              <a
+                                href={`https://wa.me/55${cleanPhone}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Conversar no WhatsApp"
+                                className="rounded-lg p-1 text-emerald-600 hover:bg-emerald-50 transition-colors"
+                              >
+                                <Phone size={13} className="rotate-90 text-emerald-600" />
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(morador)}
+                            className="rounded-lg p-2 sm:p-1.5 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                            title="Editar"
+                            aria-label="Editar morador"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(morador)}
+                            className="rounded-lg p-2 sm:p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            title="Remover"
+                            aria-label="Remover morador"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
