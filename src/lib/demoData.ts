@@ -139,3 +139,47 @@ export async function populateDemoData(): Promise<{ success: boolean; message: s
     };
   }
 }
+
+export async function resetSystemData(): Promise<{ success: boolean; message: string }> {
+  try {
+    // 1. Excluir controle de acesso (movimentações e histórico)
+    const { error: errAcesso } = await supabase
+      .from('controle_acesso')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    if (errAcesso) throw errAcesso;
+
+    // 2. Excluir visitantes
+    const { error: errVisitantes } = await supabase
+      .from('visitantes')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    if (errVisitantes) throw errVisitantes;
+
+    // 3. Excluir moradores
+    const { error: errMoradores } = await supabase
+      .from('moradores')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    if (errMoradores) throw errMoradores;
+
+    // 4. Excluir porteiros
+    const { error: errPorteiros } = await supabase
+      .from('porteiros')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    if (errPorteiros) throw errPorteiros;
+
+    return {
+      success: true,
+      message: 'Sistema zerado com sucesso! Nenhum usuário ou registro cadastrado.',
+    };
+  } catch (err) {
+    console.error('Reset system data error:', err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Erro ao zerar dados do sistema.',
+    };
+  }
+}
+

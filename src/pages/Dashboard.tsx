@@ -9,13 +9,16 @@ import {
   ShieldAlert,
   Headphones,
   Sparkles,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useMoradores } from '@/hooks/useMoradores';
 import { usePorteiros } from '@/hooks/usePorteiros';
 import { useControleAcesso } from '@/hooks/useControleAcesso';
-import { populateDemoData } from '@/lib/demoData';
+import { populateDemoData, resetSystemData } from '@/lib/demoData';
 import type { Page } from '@/components/Sidebar';
 
 interface DashboardProps {
@@ -39,6 +42,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const { porteiros, loading: loadingPorteiros, refetch: refetchPorteiros } = usePorteiros();
   const { acessos, loading: loadingAcessos, refetch: refetchAcessos } = useControleAcesso();
   const [seeding, setSeeding] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const loading = loadingMoradores || loadingPorteiros || loadingAcessos;
 
@@ -61,6 +66,19 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       console.error(err);
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleResetSystem = async () => {
+    setShowResetConfirm(false);
+    setResetting(true);
+    try {
+      await resetSystemData();
+      await Promise.all([refetchMoradores(), refetchPorteiros(), refetchAcessos()]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -107,23 +125,56 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <Sparkles size={22} />
             </div>
             <div>
-              <p className="font-semibold text-sm text-slate-900">Preparando para apresentar na faculdade?</p>
+              <p className="font-semibold text-sm text-slate-900">Sistema Limpo (0 Usuários Cadastrados)</p>
               <p className="text-xs text-slate-600 mt-0.5">
-                Clique no botão ao lado para carregar moradores, porteiros e acessos de teste automaticamente.
+                Você pode cadastrar moradores manualmente ou carregar dados de demonstração para a apresentação.
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            disabled={seeding}
-            onClick={handleCarregarDemo}
-            className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-teal-700 shadow-sm transition-all"
-          >
-            <Sparkles size={14} />
-            {seeding ? 'Carregando Dados...' : 'Carregar Dados de Exemplo'}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate('moradores')}
+                className="flex items-center gap-1.5 rounded-xl border border-teal-300 bg-white px-3.5 py-2 text-xs font-semibold text-teal-700 hover:bg-teal-50 transition-all"
+              >
+                <UserPlus size={14} />
+                Cadastrar Morador
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={seeding || resetting}
+              onClick={handleCarregarDemo}
+              className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 shadow-sm transition-all active:scale-95 disabled:opacity-60"
+            >
+              <Sparkles size={14} />
+              {seeding ? 'Carregando...' : 'Carregar Dados de Exemplo'}
+            </button>
+          </div>
         </div>
       )}
+
+      {/* Quick Action Bar for Presenter when NOT empty */}
+      {!loading && !isEmpty && (
+        <div className="flex items-center justify-between rounded-xl bg-slate-100/80 px-4 py-2.5 text-xs text-slate-600">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="h-2 w-2 rounded-full bg-teal-500" />
+            Dados ativos no sistema
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              disabled={resetting || seeding}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 font-medium transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={13} />
+              {resetting ? 'Zerando...' : 'Zerar Sistema (0 Usuários)'}
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -332,7 +383,19 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             ))}
         </div>
       </div>
+
+      {/* Confirmation Dialog for Reset */}
+      {showResetConfirm && (
+        <ConfirmDialog
+          title="Zerar Sistema do Zero?"
+          message="Tem certeza que deseja apagar todos os dados? Todos os moradores, porteiros, visitantes e acessos serão excluídos permanentemente. O sistema ficará sem nenhum usuário cadastrado."
+          confirmLabel="Sim, Zerar Tudo"
+          onConfirm={handleResetSystem}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
     </div>
   );
 }
+
 

@@ -11,9 +11,13 @@ import {
   ShieldCheck,
   Code2,
   Cpu,
+  Trash2,
+  AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 import { useCondominio } from '@/hooks/useCondominio';
-import { populateDemoData } from '@/lib/demoData';
+import { populateDemoData, resetSystemData } from '@/lib/demoData';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export function Configuracoes() {
   const { condominio, loading, error, updateCondominio, refetch } = useCondominio();
@@ -26,6 +30,12 @@ export function Configuracoes() {
   // Demo seeding state
   const [seeding, setSeeding] = useState(false);
   const [seedSuccess, setSeedSuccess] = useState<string | null>(null);
+
+  // Reset system state
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const currentNome = nome !== null ? nome : (condominio?.nome ?? '');
   const currentEndereco = endereco !== null ? endereco : (condominio?.endereco ?? '');
@@ -69,6 +79,29 @@ export function Configuracoes() {
     }
   };
 
+  const handleResetSystem = async () => {
+    setShowResetConfirm(false);
+    setResetting(true);
+    setResetSuccess(null);
+    setResetError(null);
+    try {
+      const res = await resetSystemData();
+      if (res.success) {
+        setResetSuccess(res.message);
+        await refetch();
+        window.setTimeout(() => setResetSuccess(null), 5000);
+      } else {
+        setResetError(res.message);
+        window.setTimeout(() => setResetError(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setResetError(err instanceof Error ? err.message : 'Erro ao zerar dados do sistema.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   if (loading) {
     return <p className="py-8 text-center text-sm text-slate-400">Carregando configurações...</p>;
   }
@@ -78,7 +111,7 @@ export function Configuracoes() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Configurações & Apresentação</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Personalize as informações da unidade e utilize os recursos de demonstração para a banca avaliadora.
+          Personalize as informações da unidade e gerencie o banco de dados do sistema.
         </p>
       </div>
 
@@ -167,7 +200,7 @@ export function Configuracoes() {
 
           <button
             type="button"
-            disabled={seeding}
+            disabled={seeding || resetting}
             onClick={handleCarregarDemo}
             className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-teal-400 disabled:opacity-60 shadow-lg shadow-teal-500/20 transition-all active:scale-95"
           >
@@ -183,6 +216,62 @@ export function Configuracoes() {
           </div>
         )}
       </div>
+
+      {/* Danger Zone: Reset System / Clear All Records */}
+      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-red-100 border border-red-100/60">
+        <div className="mb-5 flex items-center gap-3 border-b border-red-100/60 pb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-900">Zerar Sistema (0 Usuários Cadastrados)</h2>
+            <p className="text-xs text-slate-500">
+              Exclui todos os registros e retorna o sistema ao estado inicial vazio.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-xs text-slate-600 max-w-md">
+            Esta operação irá apagar <strong>todos os moradores, porteiros, visitantes e histórico de controle de acesso</strong>. Ideal para iniciar os testes com cadastros próprios e limpos.
+          </p>
+
+          <button
+            type="button"
+            disabled={resetting || seeding}
+            onClick={() => setShowResetConfirm(true)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-60 transition-all active:scale-95 shrink-0"
+          >
+            <Trash2 size={15} />
+            {resetting ? 'Zerando sistema...' : 'Zerar Sistema do Zero'}
+          </button>
+        </div>
+
+        {resetSuccess && (
+          <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200 flex items-center gap-2 animate-fadeIn">
+            <Check size={16} className="text-emerald-600" />
+            {resetSuccess}
+          </div>
+        )}
+
+        {resetError && (
+          <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs font-medium text-red-800 ring-1 ring-red-200 flex items-center gap-2 animate-fadeIn">
+            <AlertCircle size={16} className="text-red-600" />
+            {resetError}
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation Dialog for Reset */}
+      {showResetConfirm && (
+        <ConfirmDialog
+          title="Zerar Sistema do Zero?"
+          message="Tem certeza que deseja zerar o sistema? Todos os moradores, porteiros, visitantes e histórico de movimentações serão excluídos permanentemente. O sistema ficará sem nenhum usuário cadastrado."
+          confirmLabel="Sim, Zerar Tudo"
+          onConfirm={handleResetSystem}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
 
       {/* Project Architecture & Tech Sheet */}
       <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
@@ -235,4 +324,5 @@ export function Configuracoes() {
     </div>
   );
 }
+
 
