@@ -91,35 +91,42 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
         })}
       </nav>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer / Centered Mobile Menu */}
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm animate-fadeIn" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 bg-slate-900 p-5 shadow-2xl animate-slideDown flex flex-col justify-between">
+        <div className="fixed inset-0 z-50 md:hidden flex items-end sm:items-center justify-center p-3 sm:p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-fadeIn" onClick={() => setOpen(false)} />
+          <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 backdrop-blur-xl border border-slate-800 p-5 shadow-2xl animate-scaleIn flex flex-col justify-between max-h-[85vh] overflow-y-auto">
             <div>
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 text-white min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-slate-950 font-black shadow-sm text-base">
+              <div className="mb-5 flex items-center justify-between pb-3 border-b border-slate-800/80">
+                <div className="flex items-center gap-3 text-white min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 text-slate-950 font-black shadow-md text-lg">
                     S
                   </div>
                   <div className="min-w-0">
                     <span className="font-bold text-lg text-white block tracking-wide">Simpliz</span>
-                    <span className="text-xs text-slate-400 block truncate max-w-[150px]">{condominioNome}</span>
+                    <span className="text-xs text-slate-400 block truncate max-w-[170px]">{condominioNome}</span>
                   </div>
                 </div>
                 <button
                   onClick={() => setOpen(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                   aria-label="Fechar Menu"
                 >
                   <X size={20} />
                 </button>
               </div>
-              <NavList current={current} onNavigate={handleNavigate} />
+
+              <div className="py-1">
+                <NavList current={current} onNavigate={handleNavigate} />
+              </div>
             </div>
 
-            <div className="border-t border-slate-800 pt-4 mt-6 text-center">
-              <span className="text-xs font-medium text-slate-400">Simpliz • Portaria Inteligente</span>
+            <div className="border-t border-slate-800/80 pt-4 mt-5 text-center flex items-center justify-between text-xs text-slate-400 px-1">
+              <span>Simpliz • Portaria Mobile</span>
+              <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Online
+              </span>
             </div>
           </div>
         </div>
