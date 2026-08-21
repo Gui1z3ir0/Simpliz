@@ -49,7 +49,6 @@ export function CentralAtendimento() {
           'Conversa reiniciada. Em que posso auxiliar você agora?',
       },
     ]);
-    setError(null);
   };
 
   const gerarRespostaLocal = (pergunta: string): string => {
