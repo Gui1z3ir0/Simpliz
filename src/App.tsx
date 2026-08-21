@@ -14,10 +14,10 @@ function App() {
   const condominioNome = condominio?.nome ?? 'Portaria';
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 justify-center">
       <Sidebar current={page} onNavigate={setPage} condominioNome={condominioNome} />
-      <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-6xl px-3 py-4 pb-24 md:px-8 md:py-8 md:pb-8">
+      <main className="flex-1 overflow-x-hidden flex flex-col items-center justify-start w-full">
+        <div className="w-full max-w-5xl mx-auto px-3.5 py-4 pb-24 md:px-8 md:py-8 md:pb-8">
           {page === 'dashboard' && <Dashboard onNavigate={setPage} />}
           {page === 'moradores' && <Moradores />}
           {page === 'porteiros' && <Porteiros />}

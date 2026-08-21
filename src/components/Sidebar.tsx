@@ -60,7 +60,7 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
       </header>
 
       {/* Mobile Bottom Navigation Bar (App Mobile Style) */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 flex md:hidden items-center justify-around bg-slate-900/95 backdrop-blur-md border-t border-slate-800/80 px-1 py-1.5 shadow-2xl safe-area-bottom">
+      <nav className="fixed bottom-0 inset-x-0 z-40 flex md:hidden items-center justify-around bg-slate-900/95 backdrop-blur-md border-t border-slate-800/80 px-2 py-2 shadow-2xl safe-area-bottom max-w-lg mx-auto sm:rounded-t-2xl sm:border-x">
         {NAV_ITEMS.map(({ key, shortLabel, icon: Icon, badge }) => {
           const active = current === key;
           return (
@@ -93,7 +93,7 @@ export function Sidebar({ current, onNavigate, condominioNome }: SidebarProps) {
 
       {/* Mobile Drawer / Centered Mobile Menu */}
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden flex items-end sm:items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 z-50 md:hidden flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-fadeIn" onClick={() => setOpen(false)} />
           <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 backdrop-blur-xl border border-slate-800 p-5 shadow-2xl animate-scaleIn flex flex-col justify-between max-h-[85vh] overflow-y-auto">
             <div>
