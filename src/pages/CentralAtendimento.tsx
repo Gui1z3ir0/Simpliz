@@ -104,7 +104,6 @@ export function CentralAtendimento() {
     const pergunta = (texto ?? input).trim();
     if (!pergunta || loading) return;
 
-    setError(null);
     const novasMensagens = [...mensagens, { role: 'user' as const, content: pergunta }];
     setMensagens(novasMensagens);
     setInput('');
