@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { LocalStorageService } from '@/lib/storage';
 import type { Condominio } from '@/types';
-
-const DEFAULT_CONDOMINIO: Condominio = {
-  id: 'default',
-  nome: 'Residencial',
-  endereco: 'Portaria Principal',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 
 export function useCondominio() {
   const [condominio, setCondominio] = useState<Condominio | null>(null);
@@ -17,8 +9,16 @@ export function useCondominio() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCondominio = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    if (!isSupabaseConfigured()) {
+      setCondominio(LocalStorageService.getCondominio());
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
       const { data, error: fetchErr } = await supabase
         .from('condominio')
         .select('*')
@@ -27,27 +27,17 @@ export function useCondominio() {
         .maybeSingle();
 
       if (fetchErr) {
-        setError(fetchErr.message);
+        console.warn('Supabase fetch failed, falling back to local storage:', fetchErr.message);
+        setCondominio(LocalStorageService.getCondominio());
       } else if (data) {
         setCondominio(data);
-        setError(null);
       } else {
-        // Create initial default condominium if table is empty
-        const { data: created, error: createErr } = await supabase
-          .from('condominio')
-          .insert({ nome: 'Portaria Residencial', endereco: '' })
-          .select()
-          .maybeSingle();
-
-        if (createErr) {
-          setCondominio(DEFAULT_CONDOMINIO);
-        } else {
-          setCondominio(created || DEFAULT_CONDOMINIO);
-        }
-        setError(null);
+        const local = LocalStorageService.getCondominio();
+        setCondominio(local);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados do condomínio');
+      console.warn('Network error, using local storage fallback:', err);
+      setCondominio(LocalStorageService.getCondominio());
     } finally {
       setLoading(false);
     }
@@ -58,28 +48,42 @@ export function useCondominio() {
   }, [fetchCondominio]);
 
   const updateCondominio = async (nome: string, endereco: string) => {
-    if (!condominio) return;
+    if (!isSupabaseConfigured()) {
+      const updated = LocalStorageService.updateCondominio(nome, endereco);
+      setCondominio(updated);
+      return;
+    }
+
     try {
-      if (condominio.id === 'default') {
+      if (!condominio || condominio.id === 'default' || condominio.id === 'c1') {
         const { data, error: insertErr } = await supabase
           .from('condominio')
           .insert({ nome, endereco })
           .select()
           .maybeSingle();
-        if (insertErr) throw new Error(insertErr.message);
-        if (data) setCondominio(data);
+        if (insertErr) {
+          const updated = LocalStorageService.updateCondominio(nome, endereco);
+          setCondominio(updated);
+        } else if (data) {
+          setCondominio(data);
+        }
       } else {
         const { error: updateErr } = await supabase
           .from('condominio')
           .update({ nome, endereco, updated_at: new Date().toISOString() })
           .eq('id', condominio.id);
-        if (updateErr) throw new Error(updateErr.message);
+        if (updateErr) {
+          const updated = LocalStorageService.updateCondominio(nome, endereco);
+          setCondominio(updated);
+        }
       }
       await fetchCondominio();
-    } catch (err) {
-      throw err instanceof Error ? err : new Error('Erro ao salvar alterações');
+    } catch {
+      const updated = LocalStorageService.updateCondominio(nome, endereco);
+      setCondominio(updated);
     }
   };
 
   return { condominio, loading, error, updateCondominio, refetch: fetchCondominio };
 }
+

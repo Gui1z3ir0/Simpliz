@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { LocalStorageService } from '@/lib/storage';
 import type { Morador } from '@/types';
 
 export function useMoradores() {
@@ -8,8 +9,16 @@ export function useMoradores() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchMoradores = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    if (!isSupabaseConfigured()) {
+      setMoradores(LocalStorageService.getMoradores());
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
       const { data, error: fetchErr } = await supabase
         .from('moradores')
         .select('*')
@@ -17,13 +26,14 @@ export function useMoradores() {
         .order('apartamento', { ascending: true });
 
       if (fetchErr) {
-        setError(fetchErr.message);
+        console.warn('Supabase moradores fetch failed, using local storage:', fetchErr.message);
+        setMoradores(LocalStorageService.getMoradores());
       } else {
         setMoradores(data ?? []);
-        setError(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao buscar moradores');
+      console.warn('Network error in moradores, using local storage fallback:', err);
+      setMoradores(LocalStorageService.getMoradores());
     } finally {
       setLoading(false);
     }
@@ -34,21 +44,60 @@ export function useMoradores() {
   }, [fetchMoradores]);
 
   const addMorador = async (morador: Omit<Morador, 'id' | 'created_at'>) => {
-    const { error: insertErr } = await supabase.from('moradores').insert(morador);
-    if (insertErr) throw new Error(insertErr.message);
-    await fetchMoradores();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.addMorador(morador);
+      await fetchMoradores();
+      return;
+    }
+
+    try {
+      const { error: insertErr } = await supabase.from('moradores').insert(morador);
+      if (insertErr) {
+        LocalStorageService.addMorador(morador);
+      }
+      await fetchMoradores();
+    } catch {
+      LocalStorageService.addMorador(morador);
+      await fetchMoradores();
+    }
   };
 
   const updateMorador = async (id: string, morador: Omit<Morador, 'id' | 'created_at'>) => {
-    const { error: updateErr } = await supabase.from('moradores').update(morador).eq('id', id);
-    if (updateErr) throw new Error(updateErr.message);
-    await fetchMoradores();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.updateMorador(id, morador);
+      await fetchMoradores();
+      return;
+    }
+
+    try {
+      const { error: updateErr } = await supabase.from('moradores').update(morador).eq('id', id);
+      if (updateErr) {
+        LocalStorageService.updateMorador(id, morador);
+      }
+      await fetchMoradores();
+    } catch {
+      LocalStorageService.updateMorador(id, morador);
+      await fetchMoradores();
+    }
   };
 
   const deleteMorador = async (id: string) => {
-    const { error: deleteErr } = await supabase.from('moradores').delete().eq('id', id);
-    if (deleteErr) throw new Error(deleteErr.message);
-    await fetchMoradores();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.deleteMorador(id);
+      await fetchMoradores();
+      return;
+    }
+
+    try {
+      const { error: deleteErr } = await supabase.from('moradores').delete().eq('id', id);
+      if (deleteErr) {
+        LocalStorageService.deleteMorador(id);
+      }
+      await fetchMoradores();
+    } catch {
+      LocalStorageService.deleteMorador(id);
+      await fetchMoradores();
+    }
   };
 
   return {
@@ -61,3 +110,4 @@ export function useMoradores() {
     refetch: fetchMoradores,
   };
 }
+

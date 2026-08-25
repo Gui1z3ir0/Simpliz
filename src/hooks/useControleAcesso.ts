@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { LocalStorageService } from '@/lib/storage';
 import type { AcessoCompleto, StatusAcesso } from '@/types';
 
 export function useControleAcesso() {
@@ -8,26 +9,34 @@ export function useControleAcesso() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAcessos = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    if (!isSupabaseConfigured()) {
+      setAcessos(LocalStorageService.getAcessos());
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      const { data, error: fetchErr } = await supabase
         .from('controle_acesso')
         .select('*, visitante:visitantes(*), morador:moradores(*), porteiro:porteiros(*)')
         .order('data_hora_solicitacao', { ascending: false });
 
-      if (error) {
-        setError(error.message);
+      if (fetchErr) {
+        console.warn('Supabase acessos fetch failed, using local storage:', fetchErr.message);
+        setAcessos(LocalStorageService.getAcessos());
       } else {
         setAcessos((data as unknown as AcessoCompleto[]) ?? []);
-        setError(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar registros de acesso.');
+      console.warn('Network error in acessos, using local storage fallback:', err);
+      setAcessos(LocalStorageService.getAcessos());
     } finally {
       setLoading(false);
     }
   }, []);
-
 
   useEffect(() => {
     fetchAcessos();
@@ -40,71 +49,139 @@ export function useControleAcesso() {
     telefoneVisitante: string;
     motivoVisita: string;
   }) => {
-    const { data: visitante, error: visitanteError } = await supabase
-      .from('visitantes')
-      .insert({
-        nome: params.nomeVisitante,
-        documento: params.documentoVisitante,
-        telefone: params.telefoneVisitante,
-      })
-      .select()
-      .maybeSingle();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.solicitarAcesso(params);
+      await fetchAcessos();
+      return;
+    }
 
-    if (visitanteError) throw new Error(visitanteError.message);
-    if (!visitante) throw new Error('Não foi possível registrar o visitante.');
+    try {
+      const { data: visitante, error: visitanteError } = await supabase
+        .from('visitantes')
+        .insert({
+          nome: params.nomeVisitante,
+          documento: params.documentoVisitante,
+          telefone: params.telefoneVisitante,
+        })
+        .select()
+        .maybeSingle();
 
-    const { error: acessoError } = await supabase.from('controle_acesso').insert({
-      visitante_id: visitante.id,
-      morador_id: params.moradorId,
-      motivo_visita: params.motivoVisita,
-      status: 'aguardando' as StatusAcesso,
-    });
+      if (visitanteError || !visitante) {
+        LocalStorageService.solicitarAcesso(params);
+        await fetchAcessos();
+        return;
+      }
 
-    if (acessoError) throw new Error(acessoError.message);
-    await fetchAcessos();
+      const { error: acessoError } = await supabase.from('controle_acesso').insert({
+        visitante_id: visitante.id,
+        morador_id: params.moradorId,
+        motivo_visita: params.motivoVisita,
+        status: 'aguardando' as StatusAcesso,
+      });
+
+      if (acessoError) {
+        LocalStorageService.solicitarAcesso(params);
+      }
+      await fetchAcessos();
+    } catch {
+      LocalStorageService.solicitarAcesso(params);
+      await fetchAcessos();
+    }
   };
 
   const liberarAcesso = async (id: string, porteiroId: string) => {
-    const { error } = await supabase
-      .from('controle_acesso')
-      .update({ status: 'liberado', porteiro_id: porteiroId })
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-    await fetchAcessos();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.liberarAcesso(id, porteiroId);
+      await fetchAcessos();
+      return;
+    }
+
+    try {
+      const { error: libErr } = await supabase
+        .from('controle_acesso')
+        .update({ status: 'liberado', porteiro_id: porteiroId })
+        .eq('id', id);
+      if (libErr) {
+        LocalStorageService.liberarAcesso(id, porteiroId);
+      }
+      await fetchAcessos();
+    } catch {
+      LocalStorageService.liberarAcesso(id, porteiroId);
+      await fetchAcessos();
+    }
   };
 
   const negarAcesso = async (id: string, porteiroId: string, observacao: string) => {
-    const { error } = await supabase
-      .from('controle_acesso')
-      .update({ status: 'negado', porteiro_id: porteiroId, observacao })
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-    await fetchAcessos();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.negarAcesso(id, porteiroId, observacao);
+      await fetchAcessos();
+      return;
+    }
+
+    try {
+      const { error: negErr } = await supabase
+        .from('controle_acesso')
+        .update({ status: 'negado', porteiro_id: porteiroId, observacao })
+        .eq('id', id);
+      if (negErr) {
+        LocalStorageService.negarAcesso(id, porteiroId, observacao);
+      }
+      await fetchAcessos();
+    } catch {
+      LocalStorageService.negarAcesso(id, porteiroId, observacao);
+      await fetchAcessos();
+    }
   };
 
   const registrarEntrada = async (id: string, porteiroId: string) => {
-    const { error } = await supabase
-      .from('controle_acesso')
-      .update({
-        status: 'no_condominio',
-        porteiro_id: porteiroId,
-        data_hora_entrada: new Date().toISOString(),
-      })
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-    await fetchAcessos();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.registrarEntrada(id, porteiroId);
+      await fetchAcessos();
+      return;
+    }
+
+    try {
+      const { error: entErr } = await supabase
+        .from('controle_acesso')
+        .update({
+          status: 'no_condominio',
+          porteiro_id: porteiroId,
+          data_hora_entrada: new Date().toISOString(),
+        })
+        .eq('id', id);
+      if (entErr) {
+        LocalStorageService.registrarEntrada(id, porteiroId);
+      }
+      await fetchAcessos();
+    } catch {
+      LocalStorageService.registrarEntrada(id, porteiroId);
+      await fetchAcessos();
+    }
   };
 
   const registrarSaida = async (id: string) => {
-    const { error } = await supabase
-      .from('controle_acesso')
-      .update({
-        status: 'finalizado',
-        data_hora_saida: new Date().toISOString(),
-      })
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-    await fetchAcessos();
+    if (!isSupabaseConfigured()) {
+      LocalStorageService.registrarSaida(id);
+      await fetchAcessos();
+      return;
+    }
+
+    try {
+      const { error: saiErr } = await supabase
+        .from('controle_acesso')
+        .update({
+          status: 'finalizado',
+          data_hora_saida: new Date().toISOString(),
+        })
+        .eq('id', id);
+      if (saiErr) {
+        LocalStorageService.registrarSaida(id);
+      }
+      await fetchAcessos();
+    } catch {
+      LocalStorageService.registrarSaida(id);
+      await fetchAcessos();
+    }
   };
 
   return {
@@ -119,3 +196,4 @@ export function useControleAcesso() {
     refetch: fetchAcessos,
   };
 }
+
