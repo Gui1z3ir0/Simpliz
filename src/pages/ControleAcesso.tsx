@@ -10,6 +10,11 @@ import {
   FileText,
   Clock,
   Search,
+  CheckCircle2,
+  Calendar,
+  Phone,
+  AlertCircle,
+  Building,
 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -21,12 +26,12 @@ import type { AcessoCompleto, StatusAcesso, Morador } from '@/types';
 type FiltroStatus = 'todos' | StatusAcesso;
 
 const FILTROS: { key: FiltroStatus; label: string }[] = [
-  { key: 'todos', label: 'Todos' },
+  { key: 'todos', label: 'Todos os Registros' },
   { key: 'aguardando', label: 'Aguardando' },
   { key: 'liberado', label: 'Liberados' },
   { key: 'no_condominio', label: 'No Condomínio' },
-  { key: 'finalizado', label: 'Finalizados' },
-  { key: 'negado', label: 'Negados' },
+  { key: 'finalizado', label: 'Concluídos' },
+  { key: 'negado', label: 'Recusados' },
 ];
 
 function formatDateTime(value: string | null | undefined) {
@@ -36,6 +41,17 @@ function formatDateTime(value: string | null | undefined) {
   return d.toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatShortTime(value: string | null | undefined) {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -62,6 +78,7 @@ export function ControleAcesso() {
   const [negarTarget, setNegarTarget] = useState<AcessoCompleto | null>(null);
   const [motivoNegacao, setMotivoNegacao] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const listaFiltrada = useMemo(() => {
@@ -74,17 +91,24 @@ export function ControleAcesso() {
           (a.morador?.nome && a.morador.nome.toLowerCase().includes(term)) ||
           (a.morador?.bloco && a.morador.bloco.toLowerCase().includes(term)) ||
           (a.morador?.apartamento && a.morador.apartamento.toLowerCase().includes(term)) ||
-          (a.motivo_visita && a.motivo_visita.toLowerCase().includes(term))
+          (a.motivo_visita && a.motivo_visita.toLowerCase().includes(term)) ||
+          (a.visitante?.documento && a.visitante.documento.toLowerCase().includes(term))
       );
     }
     return list;
   }, [acessos, filtro, busca]);
 
-  const runAction = async (id: string, action: () => Promise<void>) => {
+  const showFeedback = (msg: string) => {
+    setActionSuccess(msg);
+    setTimeout(() => setActionSuccess(null), 4000);
+  };
+
+  const runAction = async (id: string, action: () => Promise<void>, successMessage: string) => {
     setActionError(null);
     setBusyId(id);
     try {
       await action();
+      showFeedback(successMessage);
       return true;
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Erro ao processar ação.');
@@ -96,10 +120,14 @@ export function ControleAcesso() {
 
   const handleLiberar = (acesso: AcessoCompleto) => {
     if (!porteiroServico) {
-      setActionError('Selecione o porteiro de serviço no topo antes de liberar um acesso.');
+      setActionError('Selecione o porteiro de serviço no topo antes de liberar o acesso.');
       return;
     }
-    runAction(acesso.id, () => liberarAcesso(acesso.id, porteiroServico));
+    runAction(
+      acesso.id,
+      () => liberarAcesso(acesso.id, porteiroServico),
+      `Acesso de ${acesso.visitante?.nome || 'visitante'} liberado com sucesso!`
+    );
   };
 
   const handleEntrada = (acesso: AcessoCompleto) => {
@@ -107,68 +135,88 @@ export function ControleAcesso() {
       setActionError('Selecione o porteiro de serviço no topo antes de registrar a entrada.');
       return;
     }
-    runAction(acesso.id, () => registrarEntrada(acesso.id, porteiroServico));
+    runAction(
+      acesso.id,
+      () => registrarEntrada(acesso.id, porteiroServico),
+      `Entrada de ${acesso.visitante?.nome || 'visitante'} registrada no condomínio.`
+    );
   };
 
   const handleSaida = (acesso: AcessoCompleto) => {
-    runAction(acesso.id, () => registrarSaida(acesso.id));
+    runAction(
+      acesso.id,
+      () => registrarSaida(acesso.id),
+      `Saída de ${acesso.visitante?.nome || 'visitante'} registrada. Acesso finalizado.`
+    );
   };
 
   const handleNegar = () => {
     if (!negarTarget) return;
     if (!porteiroServico) {
-      setActionError('Selecione o porteiro de serviço antes de negar um acesso.');
+      setActionError('Selecione o porteiro de serviço antes de recusar o acesso.');
       return;
     }
-    runAction(negarTarget.id, () => negarAcesso(negarTarget.id, porteiroServico, motivoNegacao)).then(
-      (success) => {
-        if (success) {
-          setNegarTarget(null);
-          setMotivoNegacao('');
-        }
+    runAction(
+      negarTarget.id,
+      () => negarAcesso(negarTarget.id, porteiroServico, motivoNegacao.trim()),
+      `Acesso de ${negarTarget.visitante?.nome || 'visitante'} recusado.`
+    ).then((success) => {
+      if (success) {
+        setNegarTarget(null);
+        setMotivoNegacao('');
       }
-    );
+    });
   };
 
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl shadow-xs ring-1 ring-slate-200/80">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Controle de Acesso</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Gestão de entradas, saídas e solicitações de visitas em tempo real.
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-display">
+              Controle de Acesso
+            </h1>
+            <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-200">
+              {acessos.length} {acessos.length === 1 ? 'registro' : 'registros'}
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Gestão de entradas, saídas, autorizações de moradores e histórico da guarita.
           </p>
         </div>
+
         <button
           onClick={() => setSolicitarOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
         >
           <Plus size={16} />
-          Nova Solicitação
+          <span>Nova Solicitação</span>
         </button>
       </div>
 
       {/* Porteiro de Serviço Selection Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100 shadow-sm">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
-            <UserRound size={18} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-white p-4 sm:p-5 ring-1 ring-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3.5 w-full sm:w-auto">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100">
+            <UserRound size={20} />
           </div>
           <div className="flex-1 sm:flex-initial min-w-0">
-            <label className="text-xs font-medium text-slate-500 block">Porteiro de Serviço Responsável:</label>
+            <label className="text-xs font-bold text-slate-700 block uppercase tracking-wide">
+              Porteiro de Plantão Responsável:
+            </label>
             <select
               value={porteiroServico}
               onChange={(e) => {
                 setPorteiroServico(e.target.value);
                 setActionError(null);
               }}
-              className="mt-0.5 w-full sm:w-auto rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+              className="mt-1 w-full sm:w-80 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-slate-50/50"
             >
-              <option value="">Selecione o porteiro de plantão...</option>
+              <option value="">Selecione o porteiro em serviço...</option>
               {porteiros.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.nome} ({p.turno})
+                  {p.nome} — Turno {p.turno}
                 </option>
               ))}
             </select>
@@ -176,41 +224,66 @@ export function ControleAcesso() {
         </div>
 
         {!loadingPorteiros && porteiros.length === 0 && (
-          <span className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg w-full sm:w-auto">
-            Atenção: Cadastre um porteiro na aba "Porteiros" para autorizar liberações.
-          </span>
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-2 rounded-xl flex items-center gap-2">
+            <AlertCircle size={15} />
+            <span>Cadastre um porteiro na aba "Equipe de Portaria" para autorizar liberações.</span>
+          </div>
         )}
       </div>
 
-      {/* Action Error Banner */}
-      {actionError && (
-        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-100 flex items-center justify-between">
-          <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-xs font-semibold text-red-800 hover:underline">
+      {/* Success / Error Banners */}
+      {actionSuccess && (
+        <div className="rounded-2xl bg-emerald-50 p-4 text-xs sm:text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 flex items-center justify-between animate-fadeIn">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            {actionSuccess}
+          </span>
+          <button
+            onClick={() => setActionSuccess(null)}
+            className="text-xs font-bold text-emerald-700 hover:underline"
+          >
             Fechar
           </button>
         </div>
       )}
 
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+      {actionError && (
+        <div className="rounded-2xl bg-red-50 p-4 text-xs sm:text-sm font-medium text-red-800 ring-1 ring-red-200 flex items-center justify-between animate-fadeIn">
+          <span className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-red-600" />
+            {actionError}
+          </span>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-xs font-bold text-red-700 hover:underline"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {/* Filters & Search Controls */}
+      <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        <div className="flex gap-1.5 overflow-x-auto pb-1.5 max-w-full no-scrollbar">
           {FILTROS.map(({ key, label }) => {
-            const count = key === 'todos' ? acessos.length : acessos.filter((a) => a.status === key).length;
+            const count =
+              key === 'todos' ? acessos.length : acessos.filter((a) => a.status === key).length;
             const active = filtro === key;
             return (
               <button
                 key={key}
                 onClick={() => setFiltro(key)}
-                className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${active
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
-                  }`}
+                className={`shrink-0 flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+                  active
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200/80 hover:bg-slate-50'
+                }`}
               >
                 <span>{label}</span>
                 <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${active ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    active ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {count}
                 </span>
@@ -219,142 +292,200 @@ export function ControleAcesso() {
           })}
         </div>
 
-        <div className="relative min-w-[240px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative min-w-[260px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por visitante, morador..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs rounded-full border border-slate-200 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+            placeholder="Buscar visitante, morador, bloco..."
+            className="w-full pl-10 pr-9 py-2 text-xs rounded-xl border border-slate-200 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
           />
+          {busca && (
+            <button
+              onClick={() => setBusca('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 px-1"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
-
       {/* Access Cards Feed */}
-      <div className="space-y-3">
-        {loading && <p className="py-8 text-center text-sm text-slate-400">Carregando registros...</p>}
-        {error && <p className="p-4 text-sm text-red-600 bg-red-50 rounded-xl">{error}</p>}
+      <div className="space-y-3.5">
+        {loading && (
+          <p className="py-12 text-center text-sm text-slate-400">
+            Carregando movimentações da portaria...
+          </p>
+        )}
+
+        {error && (
+          <p className="p-4 text-sm text-red-700 bg-red-50 rounded-2xl border border-red-200">
+            {error}
+          </p>
+        )}
+
         {!loading && listaFiltrada.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-2xl bg-white py-14 text-center ring-1 ring-slate-100">
-            <DoorOpen size={32} className="text-slate-300 mb-1" />
-            <p className="text-sm text-slate-500 font-medium">Nenhum registro encontrado.</p>
-            <p className="text-xs text-slate-400">Tente ajustar os filtros ou registrar uma nova solicitação.</p>
+          <div className="flex flex-col items-center gap-2 rounded-3xl bg-white py-16 text-center ring-1 ring-slate-200/80 shadow-xs">
+            <DoorOpen size={36} className="text-slate-300 mb-1" />
+            <p className="text-base text-slate-700 font-bold font-display">
+              Nenhum registro de acesso encontrado
+            </p>
+            <p className="text-xs text-slate-400 max-w-sm">
+              {busca
+                ? `Nenhum resultado corresponde à busca "${busca}".`
+                : 'Não há registros para o filtro selecionado. Registre uma nova solicitação no botão acima.'}
+            </p>
           </div>
         )}
 
         {!loading &&
-          listaFiltrada.map((acesso) => (
-            <div
-              key={acesso.id}
-              className="rounded-2xl bg-white p-5 ring-1 ring-slate-100 shadow-sm transition-all hover:shadow-md"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <p className="font-semibold text-slate-900 text-base">{acesso.visitante?.nome || 'Visitante'}</p>
-                    <StatusBadge status={acesso.status} />
-                  </div>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Visitando{' '}
-                    <strong className="font-medium text-slate-800">{acesso.morador?.nome || 'Morador'}</strong>
-                    {' · '}
-                    <span className="text-slate-500">
-                      Bloco {acesso.morador?.bloco || '-'}, Apto {acesso.morador?.apartamento || '-'}
-                    </span>
-                  </p>
-                  {acesso.motivo_visita && (
-                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-                      <FileText size={13} className="text-slate-400" />
-                      Motivo: {acesso.motivo_visita}
-                    </p>
-                  )}
+          listaFiltrada.map((acesso) => {
+            const isAguardando = acesso.status === 'aguardando';
+            const isLiberado = acesso.status === 'liberado';
+            const isNoCondominio = acesso.status === 'no_condominio';
 
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-                    <span>Doc: {acesso.visitante?.documento || '-'}</span>
-                    <span className="flex items-center gap-1">
-                      <Clock size={12} /> Solicitado: {formatDateTime(acesso.data_hora_solicitacao)}
-                    </span>
-                    {acesso.data_hora_entrada && (
-                      <span className="text-emerald-700 font-medium">
-                        Entrada: {formatDateTime(acesso.data_hora_entrada)}
+            return (
+              <div
+                key={acesso.id}
+                className="rounded-3xl bg-white p-5 sm:p-6 ring-1 ring-slate-200/80 shadow-xs transition-all hover:shadow-md hover:ring-slate-300"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  {/* Left Column: Visitor & Resident Info */}
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xs">
+                        {(acesso.visitante?.nome || 'V').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-slate-900 text-base font-display">
+                            {acesso.visitante?.nome || 'Visitante'}
+                          </p>
+                          <StatusBadge status={acesso.status} />
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Documento: <strong className="text-slate-700">{acesso.visitante?.documento || 'Não informado'}</strong>
+                          {acesso.visitante?.telefone && ` · Tel: ${acesso.visitante.telefone}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-700">
+                        <Building size={14} className="text-teal-600" />
+                        <span>
+                          Visitando: <strong className="font-semibold text-slate-900">{acesso.morador?.nome || 'Morador'}</strong>
+                        </span>
+                        <span className="bg-white px-2 py-0.5 rounded-md text-slate-600 font-semibold ring-1 ring-slate-200">
+                          Bloco {acesso.morador?.bloco || '-'} · Apto {acesso.morador?.apartamento || '-'}
+                        </span>
+                      </div>
+
+                      {acesso.motivo_visita && (
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <FileText size={13} className="text-slate-400" />
+                          <span>Motivo: <strong className="text-slate-800">{acesso.motivo_visita}</strong></span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Timestamps and Operator */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} /> Solicitado: {formatDateTime(acesso.data_hora_solicitacao)}
                       </span>
+                      {acesso.data_hora_entrada && (
+                        <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+                          <LogIn size={12} /> Entrada: {formatDateTime(acesso.data_hora_entrada)}
+                        </span>
+                      )}
+                      {acesso.data_hora_saida && (
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <LogOut size={12} /> Saída: {formatDateTime(acesso.data_hora_saida)}
+                        </span>
+                      )}
+                      {acesso.porteiro && (
+                        <span className="text-slate-600 font-medium">
+                          Porteiro: {acesso.porteiro.nome}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Denial Reason Banner if Rejected */}
+                    {acesso.status === 'negado' && acesso.observacao && (
+                      <p className="text-xs text-red-700 bg-red-50 p-2.5 rounded-xl border border-red-100 flex items-start gap-1.5">
+                        <AlertCircle size={14} className="shrink-0 mt-0.5 text-red-600" />
+                        <span><strong>Motivo da recusa:</strong> {acesso.observacao}</span>
+                      </p>
                     )}
-                    {acesso.data_hora_saida && <span>Saída: {formatDateTime(acesso.data_hora_saida)}</span>}
-                    {acesso.porteiro && <span className="text-slate-600">Porteiro: {acesso.porteiro.nome}</span>}
                   </div>
 
-                  {acesso.status === 'negado' && acesso.observacao && (
-                    <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-lg">
-                      Motivo da recusa: {acesso.observacao}
-                    </p>
-                  )}
-                </div>
+                  {/* Right Column: Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2 self-end lg:self-center shrink-0">
+                    {isAguardando && (
+                      <>
+                        <button
+                          disabled={busyId === acesso.id}
+                          onClick={() => handleLiberar(acesso)}
+                          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 shadow-xs transition-colors"
+                        >
+                          <ShieldCheck size={15} />
+                          Liberar na Guarita
+                        </button>
+                        <button
+                          disabled={busyId === acesso.id}
+                          onClick={() => {
+                            setNegarTarget(acesso);
+                            setMotivoNegacao('');
+                          }}
+                          className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60 transition-colors"
+                        >
+                          <XCircle size={15} />
+                          Recusar
+                        </button>
+                      </>
+                    )}
 
-                {/* Actions Button Group */}
-                <div className="flex flex-wrap gap-2 items-center">
-                  {acesso.status === 'aguardando' && (
-                    <>
-                      <button
-                        disabled={busyId === acesso.id}
-                        onClick={() => handleLiberar(acesso)}
-                        className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60 shadow-sm transition-colors"
-                      >
-                        <ShieldCheck size={14} />
-                        Liberar Acesso
-                      </button>
-                      <button
-                        disabled={busyId === acesso.id}
-                        onClick={() => {
-                          setNegarTarget(acesso);
-                          setMotivoNegacao('');
-                        }}
-                        className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-60 transition-colors"
-                      >
-                        <XCircle size={14} />
-                        Negar
-                      </button>
-                    </>
-                  )}
+                    {isLiberado && (
+                      <>
+                        <button
+                          disabled={busyId === acesso.id}
+                          onClick={() => handleEntrada(acesso)}
+                          className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 shadow-xs transition-colors"
+                        >
+                          <LogIn size={15} />
+                          Registrar Entrada
+                        </button>
+                        <button
+                          disabled={busyId === acesso.id}
+                          onClick={() => {
+                            setNegarTarget(acesso);
+                            setMotivoNegacao('');
+                          }}
+                          className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60 transition-colors"
+                        >
+                          <XCircle size={15} />
+                          Cancelar
+                        </button>
+                      </>
+                    )}
 
-                  {acesso.status === 'liberado' && (
-                    <>
+                    {isNoCondominio && (
                       <button
                         disabled={busyId === acesso.id}
-                        onClick={() => handleEntrada(acesso)}
-                        className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60 shadow-sm transition-colors"
+                        onClick={() => handleSaida(acesso)}
+                        className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60 shadow-xs transition-colors"
                       >
-                        <LogIn size={14} />
-                        Registrar Entrada
+                        <LogOut size={15} />
+                        Registrar Saída do Prédio
                       </button>
-                      <button
-                        disabled={busyId === acesso.id}
-                        onClick={() => {
-                          setNegarTarget(acesso);
-                          setMotivoNegacao('');
-                        }}
-                        className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-60 transition-colors"
-                      >
-                        <XCircle size={14} />
-                        Negar
-                      </button>
-                    </>
-                  )}
-
-                  {acesso.status === 'no_condominio' && (
-                    <button
-                      disabled={busyId === acesso.id}
-                      onClick={() => handleSaida(acesso)}
-                      className="flex items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2 text-xs font-medium text-white hover:bg-slate-900 disabled:opacity-60 shadow-sm transition-colors"
-                    >
-                      <LogOut size={14} />
-                      Registrar Saída
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
 
       {/* New Request Modal */}
@@ -369,32 +500,36 @@ export function ControleAcesso() {
 
       {/* Denial Reason Modal */}
       {negarTarget && (
-        <Modal title="Negar Acesso" onClose={() => setNegarTarget(null)} maxWidth="max-w-sm">
-          <p className="text-sm text-slate-600">
-            Informe o motivo da recusa de acesso para{' '}
-            <strong>{negarTarget.visitante?.nome || 'este visitante'}</strong>:
-          </p>
-          <textarea
-            autoFocus
-            value={motivoNegacao}
-            onChange={(e) => setMotivoNegacao(e.target.value)}
-            rows={3}
-            className="mt-3 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-            placeholder="Ex: Morador não autorizou ou não atendeu ao interfone."
-          />
-          <div className="mt-4 flex justify-end gap-3 border-t border-slate-100 pt-3">
-            <button
-              onClick={() => setNegarTarget(null)}
-              className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleNegar}
-              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 shadow-sm transition-colors"
-            >
-              Confirmar Recusa
-            </button>
+        <Modal title="Recusar Acesso na Portaria" onClose={() => setNegarTarget(null)} maxWidth="max-w-md">
+          <div className="space-y-3">
+            <p className="text-xs sm:text-sm text-slate-600">
+              Informe a justificativa para a recusa de entrada de{' '}
+              <strong className="text-slate-900">{negarTarget.visitante?.nome || 'este visitante'}</strong>:
+            </p>
+            <textarea
+              autoFocus
+              value={motivoNegacao}
+              onChange={(e) => setMotivoNegacao(e.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              placeholder="Ex: Morador não autorizou a entrada ou não atendeu ao interfone."
+            />
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setNegarTarget(null)}
+                className="rounded-xl px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleNegar}
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-red-700 shadow-xs transition-colors"
+              >
+                Confirmar Recusa
+              </button>
+            </div>
           </div>
         </Modal>
       )}
@@ -444,10 +579,10 @@ function NovaSolicitacaoModal({
     try {
       await onSubmit({
         moradorId,
-        nomeVisitante: nome,
-        documentoVisitante: documento,
-        telefoneVisitante: telefone,
-        motivoVisita: motivo,
+        nomeVisitante: nome.trim(),
+        documentoVisitante: documento.trim(),
+        telefoneVisitante: telefone.trim(),
+        motivoVisita: motivo.trim(),
       });
       onClose();
     } catch (err) {
@@ -458,17 +593,19 @@ function NovaSolicitacaoModal({
   };
 
   return (
-    <Modal title="Nova Solicitação de Acesso" onClose={onClose}>
+    <Modal title="Nova Solicitação de Acesso" onClose={onClose} maxWidth="max-w-lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Morador visitado</label>
+          <label className="mb-1.5 block text-xs sm:text-sm font-semibold text-slate-700">
+            Morador / Unidade de Destino *
+          </label>
           <select
             required
             value={moradorId}
             onChange={(e) => setMoradorId(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
+            className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 bg-white"
           >
-            <option value="">Selecione o morador...</option>
+            <option value="">Selecione o morador a ser visitado...</option>
             {moradores.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.nome} — Bloco {m.bloco || '-'}, Apto {m.apartamento || '-'}
@@ -476,69 +613,81 @@ function NovaSolicitacaoModal({
             ))}
           </select>
           {!loadingMoradores && moradores.length === 0 && (
-            <p className="mt-1.5 text-xs text-amber-600">
-              Cadastre moradores na aba "Moradores" antes de solicitar acessos.
+            <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
+              Cadastre moradores na aba "Moradores" antes de registrar solicitações.
             </p>
           )}
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Nome do visitante</label>
+          <label className="mb-1.5 block text-xs sm:text-sm font-semibold text-slate-700">
+            Nome Completo do Visitante *
+          </label>
           <input
             autoFocus
             required
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             placeholder="Ex: Carlos Ferreira"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento / RG / CPF</label>
+            <label className="mb-1.5 block text-xs sm:text-sm font-semibold text-slate-700">
+              Documento (RG / CPF)
+            </label>
             <input
               value={documento}
               onChange={(e) => setDocumento(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               placeholder="Ex: 12.345.678-9"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Telefone do visitante</label>
+            <label className="mb-1.5 block text-xs sm:text-sm font-semibold text-slate-700">
+              Telefone do Visitante
+            </label>
             <input
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               placeholder="Ex: (11) 98765-4321"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Motivo da visita</label>
+          <label className="mb-1.5 block text-xs sm:text-sm font-semibold text-slate-700">
+            Motivo da Visita / Observações
+          </label>
           <input
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-            placeholder="Ex: Entrega, prestador de serviço, visita familiar"
+            className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            placeholder="Ex: Entrega de encomenda, prestador de serviço, visita familiar"
           />
         </div>
 
-        {formError && <p className="text-sm text-red-600 bg-red-50 p-2.5 rounded-lg">{formError}</p>}
+        {formError && (
+          <p className="text-xs sm:text-sm text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
+            {formError}
+          </p>
+        )}
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+        <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+            className="rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-teal-600 px-5 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 shadow-sm transition-colors"
+            className="rounded-xl bg-teal-600 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60 shadow-sm transition-colors"
           >
             {saving ? 'Registrando...' : 'Registrar Solicitação'}
           </button>
@@ -547,3 +696,4 @@ function NovaSolicitacaoModal({
     </Modal>
   );
 }
+
